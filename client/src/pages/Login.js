@@ -4,7 +4,12 @@ import { FcGoogle } from 'react-icons/fc';
 
 const Login = () => {
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:5000/auth/google";
+    // [수정된 부분] 
+    // 배포된 상태면 환경변수 주소를 쓰고, 아니면 localhost를 씁니다.
+    const serverUrl = process.env.REACT_APP_SERVER_URL || "http://localhost:5000";
+    
+    // 진짜 서버 주소로 이동시킵니다.
+    window.location.href = `${serverUrl}/auth/google`;
   };
 
   return (
