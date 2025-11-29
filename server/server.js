@@ -26,7 +26,8 @@ app.use(limiter);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000", // 프론트엔드 주소
+    // 나중에 클라우드타입에서 'CLIENT_URL'이라는 변수에 웹사이트 주소를 넣어줄 겁니다.
+    origin: process.env.CLIENT_URL || "http://localhost:3000", 
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -45,7 +46,10 @@ const sessionStore = new MySQLStore({
 });
 
 // 미들웨어
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({ 
+    origin: process.env.CLIENT_URL || "http://localhost:3000", 
+    credentials: true 
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({

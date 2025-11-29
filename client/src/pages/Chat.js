@@ -4,7 +4,7 @@ import { FaPlus, FaUserFriends, FaPaperclip, FaArrowLeft, FaExclamationTriangle,
 import api from '../api';
 import io from 'socket.io-client';
 
-const socket = io.connect("http://localhost:5000");
+const socket = io.connect(process.env.REACT_APP_SERVER_URL || "http://localhost:5000");
 
 const Chat = ({ user }) => {
   const [activeRoom, setActiveRoom] = useState(null); 
