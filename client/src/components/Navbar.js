@@ -7,7 +7,10 @@ const Navbar = ({ activeTab, setActiveTab, user }) => {
 
   const handleLogout = () => {
     if(window.confirm('정말 로그아웃 하시겠습니까?')) {
-        window.location.href = "http://localhost:5000/auth/logout";
+        // [수정] localhost 대신 진짜 서버 주소로 변경!
+        // (Login.js 처럼 배포된 서버 주소를 사용합니다)
+        const serverUrl = "https://port-0-sasa-chat-mijx5epp1435215a.sel3.cloudtype.app";
+        window.location.href = `${serverUrl}/auth/logout`;
     }
   };
 
@@ -84,17 +87,17 @@ const NavContainer = styled.div`
   left: 0;
   top: 0;
   z-index: 2000;
-  /* [수정] 중요! 모바일에선 transition으로 움직이게 함 */
+  /* 모바일에선 transition으로 움직이게 함 */
   transition: transform 0.3s ease-in-out;
 
   @media (max-width: 768px) {
     width: 250px;
     height: 100%;
-    /* [수정] 닫혀있으면(-100%) 화면 왼쪽 밖으로, 열리면(0) 화면 안으로 */
+    /* 닫혀있으면(-100%) 화면 왼쪽 밖으로, 열리면(0) 화면 안으로 */
     transform: ${({ isOpen }) => (isOpen ? 'translateX(0)' : 'translateX(-100%)')};
     align-items: flex-start;
     padding-top: 0;
-    /* [수정] 내용물이 너비를 초과해도 튀어나오지 않게 함 */
+    /* 내용물이 너비를 초과해도 튀어나오지 않게 함 */
     overflow-x: hidden; 
     box-shadow: ${({ isOpen }) => (isOpen ? '2px 0 10px rgba(0,0,0,0.2)' : 'none')};
   }
@@ -158,7 +161,7 @@ const MenuButton = styled.div`
   cursor: pointer;
   background-color: ${(props) => (props.active ? '#4a90e2' : 'transparent')};
   transition: 0.2s;
-  /* [수정] 버튼 내용이 넘치지 않게 */
+  /* 버튼 내용이 넘치지 않게 */
   box-sizing: border-box; 
   
   &:hover { background-color: #555; }
@@ -171,7 +174,7 @@ const MenuButton = styled.div`
     padding-left: 20px;
     gap: 15px;
     height: 60px;
-    /* [수정] 모바일에서 활성 탭 디자인 */
+    /* 모바일에서 활성 탭 디자인 */
     border-left: 5px solid ${(props) => (props.active ? '#4a90e2' : 'transparent')};
     background-color: transparent; /* 모바일에선 배경색 대신 글자색/테두리로 표시 */
     color: ${(props) => (props.active ? '#4a90e2' : 'white')};
@@ -198,7 +201,7 @@ const Overlay = styled.div`
   top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.5);
   z-index: 1900;
-  /* [수정] 부드러운 페이드 효과 */
+  /* 부드러운 페이드 효과 */
   opacity: ${({ isOpen }) => (isOpen ? 1 : 0)};
   visibility: ${({ isOpen }) => (isOpen ? 'visible' : 'hidden')};
   transition: 0.3s;
