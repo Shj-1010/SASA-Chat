@@ -4,11 +4,10 @@ import { FcGoogle } from 'react-icons/fc';
 
 const Login = () => {
   const handleGoogleLogin = () => {
-    // [수정된 부분] 
-    // 배포된 상태면 환경변수 주소를 쓰고, 아니면 localhost를 씁니다.
-    const serverUrl = process.env.REACT_APP_SERVER_URL || "http://localhost:5000";
-    
-    // 진짜 서버 주소로 이동시킵니다.
+    // [수정] 환경변수 대신 주소를 직접 입력 (따옴표 안에 주소 넣기)
+    const serverUrl = "https://port-0-sasa-chat-mijx5epp1435215a.sel3.cloudtype.app";
+
+    // 아래 코드는 그대로 둡니다.
     window.location.href = `${serverUrl}/auth/google`;
   };
 
