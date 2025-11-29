@@ -33,8 +33,18 @@ const Recommend = ({ user }) => {
   };
 
   // 채팅방 입장 (실제로는 Chat 탭으로 이동시켜야 함)
-  const joinRoom = (roomId) => {
-      alert("채팅 탭에서 해당 방을 찾아보세요!");
+  const joinRoom = async (roomId) => {
+      try {
+          // 1. 서버에 "나 이 방 들어갈래!" 요청
+          await api.post('/chat/join', { roomId });
+          
+          alert("채팅방에 참여합니다!");
+          // 2. 채팅 탭으로 이동 (새로고침 효과를 위해 window.location 사용하거나, 상태관리 필요)
+          // 여기서는 간단하게 메인으로 이동 (Chat 탭이 기본이라면)
+          window.location.href = "/"; 
+      } catch (err) {
+          alert("참여 실패!");
+      }
   };
 
   if (loading) return <Container><Loading>추천 알고리즘 분석 중...</Loading></Container>;

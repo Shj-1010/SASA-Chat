@@ -31,15 +31,12 @@ const Chat = ({ user }) => {
 
   const fetchRooms = async () => {
     try {
-      const res = await api.get('/chat/rooms');
-      if (Array.isArray(res.data)) {
-          setChatRooms(res.data.map(r => ({
-              ...r,
-              count: 0,
-              hashtags: r.hashtags ? r.hashtags.split(',') : []
-          })));
-      } else { setChatRooms([]); }
-    } catch (err) { console.error(err); }
+      // [수정] /chat/rooms (전체) -> /chat/my-rooms (내꺼만)
+      const res = await api.get('/chat/my-rooms'); 
+      setChatRooms(res.data);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   useEffect(() => { fetchRooms(); }, []);
