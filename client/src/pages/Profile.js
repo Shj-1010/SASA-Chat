@@ -3,6 +3,9 @@ import styled from 'styled-components';
 import { FaCamera } from 'react-icons/fa';
 import api from '../api';
 
+// [중요] 서버 주소 (사진 가져올 때 필요)
+const SERVER_URL = "https://port-0-sasa-chat-mijx5epp1435215a.sel3.cloudtype.app";
+
 const Profile = ({ user, setUser }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -13,30 +16,40 @@ const Profile = ({ user, setUser }) => {
   const [preview, setPreview] = useState(null);
   const fileInputRef = useRef(null);
 
-  // [핵심 수정] 프로필 탭이 열릴 때마다 서버에서 '최신 유저 정보'를 다시 가져옴!
+  // [핵심] 사진 주소 판별기
+  // 1. 방금 올린 사진(blob:...)이면 그대로 보여줌
+  // 2. 서버에 저장된 사진(/uploads/...)이면 서버 주소를 앞에 붙여줌
+  // 3. 없으면 기본 이미지
+  const getProfileImageUrl = (imgData) => {
+      if (!imgData) return "/default.png";
+      if (imgData.startsWith("blob:")) return imgData; // 미리보기용
+      if (imgData.startsWith("/")) return `${SERVER_URL}${imgData}`; // 서버 저장된 것
+      return imgData;
+  };
+
+  // 최신 데이터 가져오기
   useEffect(() => {
     const fetchLatestUserData = async () => {
         try {
             const res = await api.get('/user/profile');
             if(res.data.success) {
-                // 부모(Home.js)가 가진 user 정보를 최신으로 업데이트
                 setUser(res.data.user);
             }
         } catch(err) {
             console.error("최신 정보 불러오기 실패");
         }
     };
-
     fetchLatestUserData();
-  }, [setUser]); // 처음 켜질 때 한 번 실행
+  }, [setUser]);
 
-  // user 정보가 바뀌면 입력창들도 업데이트
+  // user 정보가 바뀌면 화면 업데이트
   useEffect(() => {
     if (user) {
       setEditName(user.nickname);
       setEditStatus(user.status_msg || '');
-      setPreview(user.profile_img || "/default.png");
       setEditTags(user.hashtags || '');
+      // [수정] 위에서 만든 판별기 사용
+      setPreview(getProfileImageUrl(user.profile_img));
     }
   }, [user]);
 
@@ -44,6 +57,7 @@ const Profile = ({ user, setUser }) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
+      // 미리보기 URL 생성 (blob:...)
       setPreview(URL.createObjectURL(selectedFile));
     }
   };
@@ -54,7 +68,6 @@ const Profile = ({ user, setUser }) => {
     }
   };
 
-  // 저장 함수 (경고창 없음, 헤더 설정 삭제됨 - 저장 잘 됨)
   const handleSave = async () => {
     try {
       const formData = new FormData();
@@ -65,13 +78,11 @@ const Profile = ({ user, setUser }) => {
         formData.append('profile_img', file);
       }
 
-      // Axios가 알아서 Content-Type 설정함
       const res = await api.put('/user/profile', formData);
 
       if (res.data.success) {
         setUser(res.data.user);
         setIsEditing(false);
-        // 저장 완료 (조용히 성공)
       } else {
           alert("저장 실패: " + res.data.msg);
       }
@@ -81,12 +92,20 @@ const Profile = ({ user, setUser }) => {
     }
   };
 
+  // 취소 버튼 눌렀을 때도 서버 이미지로 원복
+  const handleCancel = () => {
+      setIsEditing(false);
+      setPreview(getProfileImageUrl(user.profile_img));
+      setFile(null);
+  };
+
   return (
     <Container>
       <Header>내 프로필</Header>
       <ProfileCard>
         <ImgWrapper>
-           <ProfileImg src={preview} alt="profile" />
+           {/* src에 preview 상태를 넣음 */}
+           <ProfileImg src={preview} alt="profile" onError={(e)=>{e.target.src="/default.png"}} />
            {isEditing && (
              <CameraBtn onClick={onCameraClick}>
                <FaCamera />
@@ -114,7 +133,7 @@ const Profile = ({ user, setUser }) => {
                <EditInput value={editTags} onChange={(e) => setEditTags(e.target.value)} placeholder="예: #운동, #독서" />
 
                <BtnGroup>
-                 <CancelBtn onClick={() => { setIsEditing(false); setPreview(user.profile_img || "/default.png"); }}>취소</CancelBtn>
+                 <CancelBtn onClick={handleCancel}>취소</CancelBtn>
                  <SaveBtn onClick={handleSave}>저장완료</SaveBtn>
                </BtnGroup>
             </>
