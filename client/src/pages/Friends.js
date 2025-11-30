@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaUserTimes, FaCheck, FaTimes, FaSearch, FaUserPlus, FaTrash } from 'react-icons/fa';
+import { FaUserTimes, FaCheck, FaTimes, FaSearch, FaUserPlus } from 'react-icons/fa';
 import api from '../api';
+
+// [중요] 사진 경로를 위한 서버 주소
+const SERVER_URL = "https://port-0-sasa-chat-mijx5epp1435215a.sel3.cloudtype.app";
 
 const Friends = () => {
   const [subTab, setSubTab] = useState('myFriends');
@@ -13,20 +16,29 @@ const Friends = () => {
   const [keyword, setKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
-  // [NEW] 확인 모달 상태 관리
+  // 확인 모달 상태
   const [confirmModal, setConfirmModal] = useState({
       isOpen: false,
-      type: '',      // 'DELETE_FRIEND' 또는 'CANCEL_REQUEST'
+      type: '',      
       targetId: null,
       message: ''
   });
 
+  // [핵심] 이미지 주소 처리 함수 (서버 이미지는 주소 붙여줌)
+  const getProfileImageUrl = (imgData) => {
+      if (!imgData) return "/default.png";
+      if (imgData.startsWith("blob:")) return imgData; 
+      if (imgData.startsWith("/")) return `${SERVER_URL}${imgData}`; 
+      return imgData;
+  };
+
   const fetchFriends = async () => {
     try {
       const res = await api.get('/friend/list');
-      setMyFriends(res.data.friends);
-      setReceivedRequests(res.data.received);
-      setSentRequests(res.data.sent);
+      // 데이터가 배열인지 확인 (안전장치)
+      setMyFriends(Array.isArray(res.data.friends) ? res.data.friends : []);
+      setReceivedRequests(Array.isArray(res.data.received) ? res.data.received : []);
+      setSentRequests(Array.isArray(res.data.sent) ? res.data.sent : []);
     } catch (err) { console.error(err); }
   };
 
@@ -45,8 +57,8 @@ const Friends = () => {
         const res = await api.post('/friend/request', { receiverId });
         if(res.data.success) {
             alert("요청 전송 완료!");
-            handleSearch(); // 검색 결과 갱신
-            fetchFriends(); // 내 목록 갱신
+            handleSearch(); 
+            fetchFriends(); 
         } else {
             alert(res.data.msg);
         }
@@ -60,7 +72,7 @@ const Friends = () => {
     } catch(err) { alert("처리 실패"); }
   };
 
-  // [수정] 모달 열기 함수 (친구 삭제)
+  // 모달 열기 (친구 삭제)
   const openDeleteModal = (friendId) => {
       setConfirmModal({
           isOpen: true,
@@ -70,7 +82,7 @@ const Friends = () => {
       });
   };
 
-  // [수정] 모달 열기 함수 (요청 취소)
+  // 모달 열기 (요청 취소)
   const openCancelModal = (requestId) => {
       setConfirmModal({
           isOpen: true,
@@ -80,23 +92,20 @@ const Friends = () => {
       });
   };
 
-  // [NEW] 실제 동작 실행 (모달에서 '확인' 눌렀을 때)
+  // 실제 동작 실행
   const handleConfirmAction = async () => {
       const { type, targetId } = confirmModal;
       try {
           if (type === 'DELETE_FRIEND') {
               await api.delete(`/friend/${targetId}`);
-              // 성공 후 처리
               fetchFriends();
           } else if (type === 'CANCEL_REQUEST') {
               await api.delete(`/friend/request/${targetId}`);
-              // 성공 후 처리
               fetchFriends();
           }
       } catch (err) {
           alert("작업 실패");
       } finally {
-          // 모달 닫기
           setConfirmModal({ ...confirmModal, isOpen: false });
       }
   };
@@ -118,13 +127,12 @@ const Friends = () => {
               myFriends.map(f => (
                 <Card key={f.id}>
                   <Info>
-                    <ProfileImg src={f.profile_img || "/default.png"} />
+                    <ProfileImg src={getProfileImageUrl(f.profile_img)} onError={(e)=>{e.target.src="/default.png"}} />
                     <div>
                         <Name>{f.nickname}</Name>
                         <Status>{f.status_msg}</Status>
                     </div>
                   </Info>
-                  {/* 삭제 버튼 클릭 시 모달 오픈 */}
                   <DeleteBtn onClick={() => openDeleteModal(f.id)}>
                       <FaUserTimes />
                   </DeleteBtn>
@@ -133,17 +141,20 @@ const Friends = () => {
            </List>
         )}
 
-        {/* 2. 받은 요청 */}
+        {/* 2. 받은 요청 (여기가 문제였음!) */}
         {subTab === 'received' && (
            <List>
              {receivedRequests.length === 0 ? <EmptyMsg>받은 요청이 없습니다.</EmptyMsg> :
               receivedRequests.map(req => (
                 <Card key={req.id}>
                   <Info>
-                    <ProfileImg src={req.profile_img || "/default.png"} />
+                    <ProfileImg src={getProfileImageUrl(req.profile_img)} onError={(e)=>{e.target.src="/default.png"}} />
                     <div>
                         <Name>{req.nickname}</Name>
-                        <Status>{req.created_at.split('T')[0]} 요청</Status>
+                        {/* [수정] 날짜가 없을 경우를 대비해 안전장치 추가 */}
+                        <Status>
+                            {req.created_at ? req.created_at.split('T')[0] : '날짜 미상'} 요청
+                        </Status>
                     </div>
                   </Info>
                   <BtnGroup>
@@ -162,13 +173,12 @@ const Friends = () => {
               sentRequests.map(req => (
                 <Card key={req.id}>
                   <Info>
-                    <ProfileImg src={req.profile_img || "/default.png"} />
+                    <ProfileImg src={getProfileImageUrl(req.profile_img)} onError={(e)=>{e.target.src="/default.png"}} />
                     <div>
                         <Name>{req.nickname}</Name>
                         <Status>수락 대기 중...</Status>
                     </div>
                   </Info>
-                  {/* 취소 버튼 클릭 시 모달 오픈 */}
                   <CancelBtn onClick={() => openCancelModal(req.id)}>
                       <FaTimes /> 취소
                   </CancelBtn>
@@ -193,7 +203,7 @@ const Friends = () => {
                {searchResults.map(user => (
                  <Card key={user.id}>
                    <Info>
-                     <ProfileImg src={user.profile_img || "/default.png"} />
+                     <ProfileImg src={getProfileImageUrl(user.profile_img)} onError={(e)=>{e.target.src="/default.png"}} />
                      <div>
                         <Name>{user.nickname}</Name>
                         <Status>{user.status_msg || "상태 메시지 없음"}</Status>
@@ -207,13 +217,12 @@ const Friends = () => {
         )}
       </Content>
 
-      {/* --- [NEW] 예쁜 확인 모달 --- */}
+      {/* 모달 */}
       {confirmModal.isOpen && (
           <ModalOverlay onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}>
               <ModalBox onClick={(e) => e.stopPropagation()}>
                   <ModalHeader>확인해주세요</ModalHeader>
                   <ModalBody>
-                      {/* 줄바꿈 문자(\n)를 <br>로 변환 */}
                       {confirmModal.message.split('\n').map((line, i) => (
                           <span key={i}>{line}<br/></span>
                       ))}
@@ -256,11 +265,11 @@ const DeleteBtn = styled(ActionBtn)` background: transparent; color: #ccc; font-
 const AddBtn = styled(ActionBtn)` background: #4a90e2; color: white; &:hover { background: #357abd; } `;
 const EmptyMsg = styled.div` text-align: center; padding: 40px; color: #aaa; font-size: 14px; `;
 const SearchContainer = styled.div` display: flex; flex-direction: column; gap: 20px; `;
-const SearchBox = styled.div` display: flex; gap: 10px; `;
-const SearchInput = styled.input` flex: 1; padding: 12px 20px; border: 1px solid #eee; border-radius: 25px; outline: none; background: #f9f9f9; font-size: 15px; &:focus { border-color: #4a90e2; background: white; } `;
-const SearchBtn = styled.button` width: 50px; background: #4a90e2; color: white; border: none; border-radius: 50%; cursor: pointer; display:flex; justify-content:center; align-items:center; font-size: 18px; box-shadow: 0 4px 10px rgba(74, 144, 226, 0.3); `;
+const SearchBox = styled.div` display: flex; gap: 10px; margin-bottom: 10px; `;
+const SearchInput = styled.input` flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; `;
+const SearchBtn = styled.button` width: 50px; background: #4a90e2; color: white; border: none; border-radius: 20px; cursor: pointer; display:flex; justify-content:center; align-items:center; `;
 
-// [NEW] 모달 스타일
+// 모달 스타일
 const ModalOverlay = styled.div` position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.2s; `;
 const ModalBox = styled.div` background: white; width: 320px; border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transform: scale(1); animation: popUp 0.2s; `;
 const ModalHeader = styled.h3` margin: 0 0 15px 0; font-size: 20px; font-weight: bold; color: #333; `;

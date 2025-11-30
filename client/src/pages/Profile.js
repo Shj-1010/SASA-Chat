@@ -184,4 +184,4 @@ const BtnGroup = styled.div` display: flex; gap: 10px; margin-top: 10px; `;
 const Button = styled.button` flex: 1; padding: 12px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; `;
 const EditBtn = styled(Button)` background: #4a90e2; color: white; width: 100%; &:hover { background: #357abd; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(74, 144, 226, 0.3); } `;
 const SaveBtn = styled(Button)` background: #4a90e2; color: white; &:hover { background: #357abd; } `;
-const CancelBtn = styled(Button)` background: #f1f3f5; color: #333; &:hover { background: #e9ecef; } `;
+const CancelBtn = styled(Button)` background: #f1f3f5; color: #333; &:hover { background: #e9ecef; } `;햣
