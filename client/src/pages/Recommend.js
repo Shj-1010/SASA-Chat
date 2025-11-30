@@ -1,12 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaUserPlus } from 'react-icons/fa'; // FaMagic 삭제함
+import { FaUserPlus } from 'react-icons/fa'; 
 import api from '../api';
+
+// [중요] 사진 경로를 위한 서버 주소 추가
+const SERVER_URL = "https://port-0-sasa-chat-mijx5epp1435215a.sel3.cloudtype.app";
 
 const Recommend = ({ user }) => {
   const [recUsers, setRecUsers] = useState([]);
   const [recRooms, setRecRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // [핵심] 이미지 주소 처리 함수
+  const getProfileImageUrl = (imgData) => {
+      if (!imgData) return "/default.png";
+      if (imgData.startsWith("blob:")) return imgData; 
+      if (imgData.startsWith("/")) return `${SERVER_URL}${imgData}`; 
+      return imgData;
+  };
 
   useEffect(() => {
     const fetchRecommends = async () => {
@@ -46,7 +57,6 @@ const Recommend = ({ user }) => {
   return (
     <Container>
       <Header>
-        {/* [수정] 아이콘 태그 삭제함. 이제 글씨만 나옵니다. */}
         <Title>맞춤 추천</Title> 
         <Subtitle>
              <b>{user?.nickname}</b>님의 관심사<br/>
@@ -56,19 +66,20 @@ const Recommend = ({ user }) => {
       </Header>
 
       <Section>
-        <SectionTitle>추천 친구</SectionTitle>
+        <SectionTitle>🤝 추천 친구</SectionTitle>
         <ScrollBox>
             {loading ? <LoadingMsg>분석 중...</LoadingMsg> : 
              recUsers.length === 0 ? (
                 <EmptyMsg>
-                  비슷한 취향의 친구를 찾지 못했어요.<br />
-                  프로필 태그를 추가해보세요.
+                    비슷한 취향의 친구를 찾지 못했어요.<br />
+                    프로필 태그를 추가해보세요.
                 </EmptyMsg>
-              ) :
+             ) :
              recUsers.map(u => (
                 <Card key={u.id}>
                     <UserInfo>
-                        <ProfileImg src={u.profile_img || "/default.png"} />
+                        {/* [수정] getProfileImageUrl 함수 적용 */}
+                        <ProfileImg src={getProfileImageUrl(u.profile_img)} onError={(e)=>{e.target.src="/default.png"}} />
                         <InfoText>
                             <Name>{u.nickname}</Name>
                             <Status>{u.status_msg || "상태 메시지 없음"}</Status>
@@ -84,14 +95,10 @@ const Recommend = ({ user }) => {
       </Section>
 
       <Section>
-        <SectionTitle>추천 채팅방</SectionTitle>
+        <SectionTitle>💬 추천 채팅방</SectionTitle>
         <ScrollBox>
             {loading ? <LoadingMsg>분석 중...</LoadingMsg> : 
-             recRooms.length === 0 ? (<EmptyMsg>
-                  관심사가 일치하는 채팅방이 없어요.<br />
-                  직접 만들어볼까요?
-                </EmptyMsg> 
-             ):
+             recRooms.length === 0 ? <EmptyMsg>추천할 채팅방이 없습니다.</EmptyMsg> :
              recRooms.map(room => (
                 <Card key={room.id}>
                     <UserInfo>
@@ -139,7 +146,6 @@ const Title = styled.h1`
   font-weight: bold;
   color: #333;
   margin-bottom: 15px;
-  /* 아이콘 정렬용 속성 삭제해도 됨 */
   display: block; 
 `;
 
