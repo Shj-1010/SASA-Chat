@@ -36,7 +36,7 @@ const Profile = ({ user, setUser }) => {
     }
   };
 
-  // [수정] 경고창 없이 바로 저장하는 함수
+  // [수정] 헤더 설정 삭제! (이제 저장 잘 됩니다)
   const handleSave = async () => {
     try {
       const formData = new FormData();
@@ -47,20 +47,19 @@ const Profile = ({ user, setUser }) => {
         formData.append('profile_img', file);
       }
 
-      const res = await api.put('/user/profile', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      // [핵심 수정] headers 설정을 지웠습니다. Axios가 알아서 처리합니다.
+      const res = await api.put('/user/profile', formData);
 
       if (res.data.success) {
-        // user 상태 업데이트
         setUser(res.data.user);
         setIsEditing(false);
-        // 저장은 조용히 하고 완료되었다는 것만 살짝 알려줌 (선택사항)
-        // alert("저장되었습니다."); 
+        // 저장 성공! (조용히 처리)
+      } else {
+          alert("저장 실패: " + res.data.msg); // 서버가 보낸 에러 메시지 표시
       }
     } catch (err) {
       console.error(err);
-      alert("저장 실패!");
+      alert("저장 중 오류가 발생했습니다.");
     }
   };
 
@@ -128,7 +127,7 @@ const Profile = ({ user, setUser }) => {
 
 export default Profile;
 
-// --- 스타일 컴포넌트 ---
+// --- 스타일 컴포넌트 (그대로 유지) ---
 const Container = styled.div` padding: 40px; background-color: #fdfdfd; height: 100%; overflow-y: auto; `;
 const Header = styled.h1` font-size: 26px; font-weight: bold; margin-bottom: 30px; color: #333; `;
 const ProfileCard = styled.div` background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; max-width: 500px; margin: 0 auto; text-align: center; `;
