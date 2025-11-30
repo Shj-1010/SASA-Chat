@@ -10,11 +10,19 @@ const MySQLStore = require('express-mysql-session')(session);
 const db = require('./config/db');
 const helmet = require('helmet'); // 보안 헤더
 const rateLimit = require('express-rate-limit'); // 디도스 방지
+const fs = require('fs'); // [추가 1] 파일 시스템 모듈 (폴더 만들기용)
 
 dotenv.config();
 require('./config/passport')(passport);
 
 const app = express();
+
+// [추가 2] 서버 켜질 때 'uploads' 폴더가 없으면 자동으로 만들기! (핵심)
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+    console.log('📁 uploads 폴더가 자동으로 생성되었습니다.');
+}
 
 // [중요] 클라우드타입(Proxy) 환경 신뢰 설정
 app.set('trust proxy', 1);
@@ -78,6 +86,8 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+// [중요] 업로드된 사진을 웹에서 볼 수 있게 열어주기
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 라우트
