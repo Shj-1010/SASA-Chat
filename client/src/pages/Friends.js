@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import { FaUserTimes, FaCheck, FaTimes, FaSearch, FaUserPlus, FaExclamationCircle } from 'react-icons/fa';
 import api from '../api';
 
-// [중요] 사진 경로를 위한 서버 주소
 const SERVER_URL = "https://port-0-sasa-chat-mijx5epp1435215a.sel3.cloudtype.app";
 
 const Friends = () => {
@@ -19,11 +18,11 @@ const Friends = () => {
   // 확인 모달 상태 (삭제/취소용)
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', targetId: null, message: '' });
 
-  // [NEW] 신고 모달 상태
+  // 신고 모달 상태
   const [reportModal, setReportModal] = useState({ isOpen: false, targetId: null, nickname: '' });
   const [reportReason, setReportReason] = useState('');
 
-  // [핵심] 이미지 주소 처리 함수 (서버 이미지는 주소 붙여줌)
+  // 이미지 주소 처리
   const getProfileImageUrl = (imgData) => {
       if (!imgData) return "/default.png";
       if (imgData.startsWith("blob:")) return imgData; 
@@ -31,15 +30,13 @@ const Friends = () => {
       return imgData;
   };
 
-  // [핵심] 날짜 안전하게 변환하는 함수 (에러 방지용)
+  // 날짜 안전하게 변환
   const formatDate = (dateString) => {
       if (!dateString) return "";
       try {
           const date = new Date(dateString);
-          return date.toLocaleDateString(); // "2023. 11. 30." 형식으로 변환
-      } catch (e) {
-          return "";
-      }
+          return date.toLocaleDateString();
+      } catch (e) { return ""; }
   };
 
   const fetchFriends = async () => {
@@ -100,10 +97,9 @@ const Friends = () => {
       });
   };
 
-  // [NEW] 신고 모달 열기
   const openReportModal = (user) => {
       setReportModal({ isOpen: true, targetId: user.id, nickname: user.nickname });
-      setReportReason(''); // 초기화
+      setReportReason('');
   };
 
   const handleConfirmAction = async () => {
@@ -123,7 +119,6 @@ const Friends = () => {
       }
   };
 
-  // [NEW] 신고 전송 함수
   const submitReport = async () => {
       if(!reportReason.trim()) return alert("신고 사유를 입력해주세요.");
       try {
@@ -161,7 +156,6 @@ const Friends = () => {
                     </div>
                   </Info>
                   <BtnGroup>
-                      {/* 신고 버튼 추가 */}
                       <ReportBtn onClick={() => openReportModal(f)}>
                           <FaExclamationCircle />
                       </ReportBtn>
@@ -184,7 +178,6 @@ const Friends = () => {
                     <ProfileImg src={getProfileImageUrl(req.profile_img)} onError={(e)=>{e.target.src="/default.png"}} />
                     <div>
                         <Name>{req.nickname}</Name>
-                        {/* [수정] 안전한 날짜 변환 함수 사용 */}
                         <Status>{formatDate(req.created_at)} 요청</Status>
                     </div>
                   </Info>
@@ -258,6 +251,7 @@ const Friends = () => {
               <ModalBox onClick={(e) => e.stopPropagation()}>
                   <ModalHeader>확인</ModalHeader>
                   <ModalBody>{confirmModal.message}</ModalBody>
+                  {/* [수정] ModalFooter가 여기 있습니다! */}
                   <ModalFooter>
                       <SecondaryButton onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}>
                           취소
@@ -270,7 +264,7 @@ const Friends = () => {
           </ModalOverlay>
       )}
 
-      {/* [NEW] 신고 모달 */}
+      {/* 신고 모달 */}
       {reportModal.isOpen && (
           <ModalOverlay onClick={() => setReportModal({ ...reportModal, isOpen: false })}>
               <ModalBox onClick={(e) => e.stopPropagation()}>
@@ -281,14 +275,15 @@ const Friends = () => {
                       value={reportReason} 
                       onChange={(e) => setReportReason(e.target.value)}
                   />
-                  <div style={{display:'flex', gap:'10px'}}>
+                  {/* [수정] 여기도 ModalFooter 사용 */}
+                  <ModalFooter>
                       <SecondaryButton onClick={() => setReportModal({ ...reportModal, isOpen: false })}>
                           취소
                       </SecondaryButton>
                       <DangerButton onClick={submitReport}>
                           신고
                       </DangerButton>
-                  </div>
+                  </ModalFooter>
               </ModalBox>
           </ModalOverlay>
       )}
@@ -329,6 +324,10 @@ const ModalBox = styled.div` background: white; width: 320px; border-radius: 20p
 const ModalHeader = styled.h3` margin: 0 0 15px 0; font-size: 20px; font-weight: bold; color: #333; `;
 const ModalBody = styled.div` font-size: 15px; color: #666; margin-bottom: 25px; `;
 const ModalTextArea = styled.textarea` width: 100%; height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 20px; outline: none; resize: none; `;
+
+// [중요] 여기에 ModalFooter가 추가되었습니다!
+const ModalFooter = styled.div` display: flex; gap: 10px; justify-content: center; `;
+
 const ModalBtn = styled.button` flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 14px; `;
 const SecondaryButton = styled(ModalBtn)` background: #f1f3f5; color: #555; `;
 const DangerButton = styled(ModalBtn)` background: #ffebee; color: #d9534f; `;
