@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import { FaUserTimes, FaCheck, FaTimes, FaSearch, FaUserPlus } from 'react-icons/fa';
 import api from '../api';
 
-// [중요] 사진 경로를 위한 서버 주소
 const SERVER_URL = "https://port-0-sasa-chat-mijx5epp1435215a.sel3.cloudtype.app";
 
 const Friends = () => {
@@ -16,7 +15,7 @@ const Friends = () => {
   const [keyword, setKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
-  // 확인 모달 상태
+  // 모달 상태
   const [confirmModal, setConfirmModal] = useState({
       isOpen: false,
       type: '',      
@@ -24,7 +23,7 @@ const Friends = () => {
       message: ''
   });
 
-  // [핵심] 이미지 주소 처리 함수 (서버 이미지는 주소 붙여줌)
+  // 이미지 주소 처리
   const getProfileImageUrl = (imgData) => {
       if (!imgData) return "/default.png";
       if (imgData.startsWith("blob:")) return imgData; 
@@ -32,10 +31,20 @@ const Friends = () => {
       return imgData;
   };
 
+  // [핵심] 날짜 안전하게 변환하는 함수 (에러 방지용)
+  const formatDate = (dateString) => {
+      if (!dateString) return "날짜 정보 없음";
+      try {
+          const date = new Date(dateString);
+          return date.toLocaleDateString(); // "2023. 11. 30." 형식으로 변환
+      } catch (e) {
+          return "날짜 오류";
+      }
+  };
+
   const fetchFriends = async () => {
     try {
       const res = await api.get('/friend/list');
-      // 데이터가 배열인지 확인 (안전장치)
       setMyFriends(Array.isArray(res.data.friends) ? res.data.friends : []);
       setReceivedRequests(Array.isArray(res.data.received) ? res.data.received : []);
       setSentRequests(Array.isArray(res.data.sent) ? res.data.sent : []);
@@ -72,7 +81,6 @@ const Friends = () => {
     } catch(err) { alert("처리 실패"); }
   };
 
-  // 모달 열기 (친구 삭제)
   const openDeleteModal = (friendId) => {
       setConfirmModal({
           isOpen: true,
@@ -82,7 +90,6 @@ const Friends = () => {
       });
   };
 
-  // 모달 열기 (요청 취소)
   const openCancelModal = (requestId) => {
       setConfirmModal({
           isOpen: true,
@@ -92,7 +99,6 @@ const Friends = () => {
       });
   };
 
-  // 실제 동작 실행
   const handleConfirmAction = async () => {
       const { type, targetId } = confirmModal;
       try {
@@ -141,7 +147,7 @@ const Friends = () => {
            </List>
         )}
 
-        {/* 2. 받은 요청 (여기가 문제였음!) */}
+        {/* 2. 받은 요청 (여기가 에러나던 곳!) */}
         {subTab === 'received' && (
            <List>
              {receivedRequests.length === 0 ? <EmptyMsg>받은 요청이 없습니다.</EmptyMsg> :
@@ -151,10 +157,8 @@ const Friends = () => {
                     <ProfileImg src={getProfileImageUrl(req.profile_img)} onError={(e)=>{e.target.src="/default.png"}} />
                     <div>
                         <Name>{req.nickname}</Name>
-                        {/* [수정] 날짜가 없을 경우를 대비해 안전장치 추가 */}
-                        <Status>
-                            {req.created_at ? req.created_at.split('T')[0] : '날짜 미상'} 요청
-                        </Status>
+                        {/* [수정] 안전한 날짜 변환 함수 사용 */}
+                        <Status>{formatDate(req.created_at)} 요청</Status>
                     </div>
                   </Info>
                   <BtnGroup>
@@ -245,7 +249,7 @@ const Friends = () => {
 
 export default Friends;
 
-// --- 스타일 컴포넌트 ---
+// --- 스타일 컴포넌트 (그대로 유지) ---
 const Container = styled.div` padding: 20px; background-color: #fdfdfd; height: 100%; display: flex; flex-direction: column; `;
 const TabHeader = styled.div` display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; &::-webkit-scrollbar { display: none; } `;
 const SubTab = styled.button` padding: 10px 16px; border-radius: 20px; border: none; background-color: ${props => props.active ? '#4a90e2' : '#f0f0f0'}; color: ${props => props.active ? 'white' : '#666'}; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; &:hover { opacity: 0.9; } `;
@@ -268,8 +272,6 @@ const SearchContainer = styled.div` display: flex; flex-direction: column; gap: 
 const SearchBox = styled.div` display: flex; gap: 10px; margin-bottom: 10px; `;
 const SearchInput = styled.input` flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; `;
 const SearchBtn = styled.button` width: 50px; background: #4a90e2; color: white; border: none; border-radius: 20px; cursor: pointer; display:flex; justify-content:center; align-items:center; `;
-
-// 모달 스타일
 const ModalOverlay = styled.div` position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.2s; `;
 const ModalBox = styled.div` background: white; width: 320px; border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transform: scale(1); animation: popUp 0.2s; `;
 const ModalHeader = styled.h3` margin: 0 0 15px 0; font-size: 20px; font-weight: bold; color: #333; `;
