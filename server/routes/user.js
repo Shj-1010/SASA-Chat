@@ -77,4 +77,22 @@ router.put('/profile', upload.single('profile_img'), async (req, res) => {
     }
 });
 
+router.post('/report', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ success: false, msg: '로그인 필요' });
+    
+    const reporterId = req.user.id;
+    const { targetId, reason, description } = req.body;
+
+    try {
+        await db.query(
+            'INSERT INTO reports (reporter_id, target_id, reason, description) VALUES (?, ?, ?, ?)',
+            [reporterId, targetId, reason, description]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, msg: '신고 접수 실패' });
+    }
+});
+
 module.exports = router;

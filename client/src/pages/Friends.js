@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaUserTimes, FaCheck, FaTimes, FaSearch, FaUserPlus } from 'react-icons/fa';
+import { FaUserTimes, FaCheck, FaTimes, FaSearch, FaUserPlus, FaExclamationCircle } from 'react-icons/fa';
 import api from '../api';
 
+// [중요] 사진 경로를 위한 서버 주소
 const SERVER_URL = "https://port-0-sasa-chat-mijx5epp1435215a.sel3.cloudtype.app";
 
 const Friends = () => {
@@ -15,15 +16,14 @@ const Friends = () => {
   const [keyword, setKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
-  // 모달 상태
-  const [confirmModal, setConfirmModal] = useState({
-      isOpen: false,
-      type: '',      
-      targetId: null,
-      message: ''
-  });
+  // 확인 모달 상태 (삭제/취소용)
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', targetId: null, message: '' });
 
-  // 이미지 주소 처리
+  // [NEW] 신고 모달 상태
+  const [reportModal, setReportModal] = useState({ isOpen: false, targetId: null, nickname: '' });
+  const [reportReason, setReportReason] = useState('');
+
+  // [핵심] 이미지 주소 처리 함수 (서버 이미지는 주소 붙여줌)
   const getProfileImageUrl = (imgData) => {
       if (!imgData) return "/default.png";
       if (imgData.startsWith("blob:")) return imgData; 
@@ -33,12 +33,12 @@ const Friends = () => {
 
   // [핵심] 날짜 안전하게 변환하는 함수 (에러 방지용)
   const formatDate = (dateString) => {
-      if (!dateString) return "날짜 정보 없음";
+      if (!dateString) return "";
       try {
           const date = new Date(dateString);
           return date.toLocaleDateString(); // "2023. 11. 30." 형식으로 변환
       } catch (e) {
-          return "날짜 오류";
+          return "";
       }
   };
 
@@ -81,12 +81,13 @@ const Friends = () => {
     } catch(err) { alert("처리 실패"); }
   };
 
+  // 모달 열기 함수들
   const openDeleteModal = (friendId) => {
       setConfirmModal({
           isOpen: true,
           type: 'DELETE_FRIEND',
           targetId: friendId,
-          message: '정말 이 친구를 삭제하시겠습니까?\n채팅 내역은 유지되지만 친구 목록에서 사라집니다.'
+          message: '정말 삭제하시겠습니까?'
       });
   };
 
@@ -95,8 +96,14 @@ const Friends = () => {
           isOpen: true,
           type: 'CANCEL_REQUEST',
           targetId: requestId,
-          message: '보낸 친구 요청을 취소하시겠습니까?'
+          message: '요청을 취소하시겠습니까?'
       });
+  };
+
+  // [NEW] 신고 모달 열기
+  const openReportModal = (user) => {
+      setReportModal({ isOpen: true, targetId: user.id, nickname: user.nickname });
+      setReportReason(''); // 초기화
   };
 
   const handleConfirmAction = async () => {
@@ -116,12 +123,26 @@ const Friends = () => {
       }
   };
 
+  // [NEW] 신고 전송 함수
+  const submitReport = async () => {
+      if(!reportReason.trim()) return alert("신고 사유를 입력해주세요.");
+      try {
+          await api.post('/user/report', {
+              targetId: reportModal.targetId,
+              reason: "부적절한 유저 신고",
+              description: reportReason
+          });
+          alert("신고가 접수되었습니다. 관리자가 검토하겠습니다.");
+          setReportModal({ ...reportModal, isOpen: false });
+      } catch(err) { alert("신고 실패"); }
+  };
+
   return (
     <Container>
       <TabHeader>
-        <SubTab active={subTab === 'myFriends'} onClick={() => setSubTab('myFriends')}>내 친구 ({myFriends.length})</SubTab>
-        <SubTab active={subTab === 'received'} onClick={() => setSubTab('received')}>받은 요청 ({receivedRequests.length})</SubTab>
-        <SubTab active={subTab === 'sent'} onClick={() => setSubTab('sent')}>보낸 요청 ({sentRequests.length})</SubTab>
+        <SubTab active={subTab === 'myFriends'} onClick={() => setSubTab('myFriends')}>내 친구</SubTab>
+        <SubTab active={subTab === 'received'} onClick={() => setSubTab('received')}>받은 요청</SubTab>
+        <SubTab active={subTab === 'sent'} onClick={() => setSubTab('sent')}>보낸 요청</SubTab>
         <SubTab active={subTab === 'search'} onClick={() => setSubTab('search')}>친구 찾기</SubTab>
       </TabHeader>
 
@@ -129,7 +150,7 @@ const Friends = () => {
         {/* 1. 내 친구 목록 */}
         {subTab === 'myFriends' && (
            <List>
-             {myFriends.length === 0 ? <EmptyMsg>아직 친구가 없습니다. 친구를 찾아보세요!</EmptyMsg> : 
+             {myFriends.length === 0 ? <EmptyMsg>친구가 없습니다.</EmptyMsg> : 
               myFriends.map(f => (
                 <Card key={f.id}>
                   <Info>
@@ -139,15 +160,21 @@ const Friends = () => {
                         <Status>{f.status_msg}</Status>
                     </div>
                   </Info>
-                  <DeleteBtn onClick={() => openDeleteModal(f.id)}>
-                      <FaUserTimes />
-                  </DeleteBtn>
+                  <BtnGroup>
+                      {/* 신고 버튼 추가 */}
+                      <ReportBtn onClick={() => openReportModal(f)}>
+                          <FaExclamationCircle />
+                      </ReportBtn>
+                      <DeleteBtn onClick={() => openDeleteModal(f.id)}>
+                          <FaUserTimes />
+                      </DeleteBtn>
+                  </BtnGroup>
                 </Card>
              ))}
            </List>
         )}
 
-        {/* 2. 받은 요청 (여기가 에러나던 곳!) */}
+        {/* 2. 받은 요청 */}
         {subTab === 'received' && (
            <List>
              {receivedRequests.length === 0 ? <EmptyMsg>받은 요청이 없습니다.</EmptyMsg> :
@@ -162,8 +189,9 @@ const Friends = () => {
                     </div>
                   </Info>
                   <BtnGroup>
-                    <AcceptBtn onClick={() => respondRequest(req.id, 'accept')}><FaCheck /> 수락</AcceptBtn>
-                    <RejectBtn onClick={() => respondRequest(req.id, 'reject')}><FaTimes /> 거절</RejectBtn>
+                    <AcceptBtn onClick={() => respondRequest(req.id, 'accept')}><FaCheck /></AcceptBtn>
+                    <RejectBtn onClick={() => respondRequest(req.id, 'reject')}><FaTimes /></RejectBtn>
+                    <ReportBtn onClick={() => openReportModal(req)}><FaExclamationCircle /></ReportBtn>
                   </BtnGroup>
                 </Card>
              ))}
@@ -180,7 +208,7 @@ const Friends = () => {
                     <ProfileImg src={getProfileImageUrl(req.profile_img)} onError={(e)=>{e.target.src="/default.png"}} />
                     <div>
                         <Name>{req.nickname}</Name>
-                        <Status>수락 대기 중...</Status>
+                        <Status>수락 대기 중</Status>
                     </div>
                   </Info>
                   <CancelBtn onClick={() => openCancelModal(req.id)}>
@@ -196,7 +224,7 @@ const Friends = () => {
           <SearchContainer>
             <SearchBox>
               <SearchInput 
-                placeholder="닉네임으로 검색해보세요" 
+                placeholder="닉네임 검색" 
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -210,10 +238,13 @@ const Friends = () => {
                      <ProfileImg src={getProfileImageUrl(user.profile_img)} onError={(e)=>{e.target.src="/default.png"}} />
                      <div>
                         <Name>{user.nickname}</Name>
-                        <Status>{user.status_msg || "상태 메시지 없음"}</Status>
+                        <Status>{user.status_msg}</Status>
                      </div>
                    </Info>
-                   <AddBtn onClick={() => sendRequest(user.id)}><FaUserPlus /> 친구요청</AddBtn>
+                   <BtnGroup>
+                       <ReportBtn onClick={() => openReportModal(user)}><FaExclamationCircle /></ReportBtn>
+                       <AddBtn onClick={() => sendRequest(user.id)}><FaUserPlus /></AddBtn>
+                   </BtnGroup>
                  </Card>
                ))}
             </List>
@@ -221,24 +252,43 @@ const Friends = () => {
         )}
       </Content>
 
-      {/* 모달 */}
+      {/* 삭제/취소 확인 모달 */}
       {confirmModal.isOpen && (
           <ModalOverlay onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}>
               <ModalBox onClick={(e) => e.stopPropagation()}>
-                  <ModalHeader>확인해주세요</ModalHeader>
-                  <ModalBody>
-                      {confirmModal.message.split('\n').map((line, i) => (
-                          <span key={i}>{line}<br/></span>
-                      ))}
-                  </ModalBody>
+                  <ModalHeader>확인</ModalHeader>
+                  <ModalBody>{confirmModal.message}</ModalBody>
                   <ModalFooter>
                       <SecondaryButton onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}>
-                          아니요
+                          취소
                       </SecondaryButton>
                       <DangerButton onClick={handleConfirmAction}>
-                          {confirmModal.type === 'DELETE_FRIEND' ? '삭제하기' : '취소하기'}
+                          확인
                       </DangerButton>
                   </ModalFooter>
+              </ModalBox>
+          </ModalOverlay>
+      )}
+
+      {/* [NEW] 신고 모달 */}
+      {reportModal.isOpen && (
+          <ModalOverlay onClick={() => setReportModal({ ...reportModal, isOpen: false })}>
+              <ModalBox onClick={(e) => e.stopPropagation()}>
+                  <h3 style={{margin:'0 0 15px 0', fontSize:'18px'}}>🚨 유저 신고</h3>
+                  <p style={{color:'#666', marginBottom:'15px'}}>대상: <b>{reportModal.nickname}</b></p>
+                  <ModalTextArea 
+                      placeholder="신고 사유를 적어주세요." 
+                      value={reportReason} 
+                      onChange={(e) => setReportReason(e.target.value)}
+                  />
+                  <div style={{display:'flex', gap:'10px'}}>
+                      <SecondaryButton onClick={() => setReportModal({ ...reportModal, isOpen: false })}>
+                          취소
+                      </SecondaryButton>
+                      <DangerButton onClick={submitReport}>
+                          신고
+                      </DangerButton>
+                  </div>
               </ModalBox>
           </ModalOverlay>
       )}
@@ -249,34 +299,36 @@ const Friends = () => {
 
 export default Friends;
 
-// --- 스타일 컴포넌트 (그대로 유지) ---
+// --- 스타일 컴포넌트 ---
 const Container = styled.div` padding: 20px; background-color: #fdfdfd; height: 100%; display: flex; flex-direction: column; `;
 const TabHeader = styled.div` display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; &::-webkit-scrollbar { display: none; } `;
-const SubTab = styled.button` padding: 10px 16px; border-radius: 20px; border: none; background-color: ${props => props.active ? '#4a90e2' : '#f0f0f0'}; color: ${props => props.active ? 'white' : '#666'}; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; &:hover { opacity: 0.9; } `;
+const SubTab = styled.button` padding: 10px 16px; border-radius: 20px; border: none; background-color: ${props => props.active ? '#4a90e2' : '#f0f0f0'}; color: ${props => props.active ? 'white' : '#666'}; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; `;
 const Content = styled.div` flex: 1; overflow-y: auto; `;
 const List = styled.div` display: flex; flex-direction: column; gap: 10px; `;
-const Card = styled.div` background: white; padding: 15px; border-radius: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid #f5f5f5; `;
-const Info = styled.div` display: flex; align-items: center; gap: 15px; `;
-const ProfileImg = styled.img` width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 1px solid #eee; `;
+const Card = styled.div` background: white; padding: 15px; border-radius: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.03); border: 1px solid #f5f5f5; `;
+const Info = styled.div` display: flex; align-items: center; gap: 15px; flex: 1; overflow: hidden;`;
+const ProfileImg = styled.img` width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 1px solid #eee; flex-shrink: 0;`;
 const Name = styled.div` font-weight: bold; font-size: 16px; color: #333; `;
-const Status = styled.div` font-size: 13px; color: #888; margin-top: 3px; `;
+const Status = styled.div` font-size: 13px; color: #888; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;`;
 const BtnGroup = styled.div` display: flex; gap: 5px; `;
-const ActionBtn = styled.button` padding: 6px 12px; border-radius: 15px; border: none; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: bold; transition: 0.2s; `;
-const AcceptBtn = styled(ActionBtn)` background: #e3f2fd; color: #4a90e2; &:hover { background: #bbdefb; } `;
-const RejectBtn = styled(ActionBtn)` background: #ffebee; color: #d9534f; &:hover { background: #ffcdd2; } `;
-const CancelBtn = styled(ActionBtn)` background: #f5f5f5; color: #888; &:hover { background: #ddd; } `;
-const DeleteBtn = styled(ActionBtn)` background: transparent; color: #ccc; font-size: 16px; padding: 10px; &:hover { color: #d9534f; background: #fff0f0; } `;
-const AddBtn = styled(ActionBtn)` background: #4a90e2; color: white; &:hover { background: #357abd; } `;
+const ActionBtn = styled.button` padding: 8px; border-radius: 12px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: 0.2s; `;
+const AcceptBtn = styled(ActionBtn)` background: #e3f2fd; color: #4a90e2; `;
+const RejectBtn = styled(ActionBtn)` background: #ffebee; color: #d9534f; `;
+const CancelBtn = styled(ActionBtn)` background: #f5f5f5; color: #888; padding: 6px 12px; gap: 5px;`;
+const DeleteBtn = styled(ActionBtn)` background: transparent; color: #ccc; &:hover { color: #d9534f; background: #fff0f0; } `;
+const AddBtn = styled(ActionBtn)` background: #4a90e2; color: white; width: 35px; height: 35px; `;
+const ReportBtn = styled(ActionBtn)` background: #fff3e0; color: #ff9800; width: 35px; height: 35px; &:hover { background: #ffe0b2; } `; 
 const EmptyMsg = styled.div` text-align: center; padding: 40px; color: #aaa; font-size: 14px; `;
 const SearchContainer = styled.div` display: flex; flex-direction: column; gap: 20px; `;
 const SearchBox = styled.div` display: flex; gap: 10px; margin-bottom: 10px; `;
 const SearchInput = styled.input` flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; `;
 const SearchBtn = styled.button` width: 50px; background: #4a90e2; color: white; border: none; border-radius: 20px; cursor: pointer; display:flex; justify-content:center; align-items:center; `;
+
 const ModalOverlay = styled.div` position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.2s; `;
-const ModalBox = styled.div` background: white; width: 320px; border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transform: scale(1); animation: popUp 0.2s; `;
+const ModalBox = styled.div` background: white; width: 320px; border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popUp 0.2s; `;
 const ModalHeader = styled.h3` margin: 0 0 15px 0; font-size: 20px; font-weight: bold; color: #333; `;
-const ModalBody = styled.div` font-size: 15px; color: #666; margin-bottom: 25px; line-height: 1.5; `;
-const ModalFooter = styled.div` display: flex; gap: 10px; justify-content: center; `;
-const ModalBtn = styled.button` flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 15px; transition: 0.2s; `;
-const SecondaryButton = styled(ModalBtn)` background: #f1f3f5; color: #555; &:hover { background: #e9ecef; } `;
-const DangerButton = styled(ModalBtn)` background: #ffebee; color: #d9534f; &:hover { background: #ffcdd2; } `;
+const ModalBody = styled.div` font-size: 15px; color: #666; margin-bottom: 25px; `;
+const ModalTextArea = styled.textarea` width: 100%; height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 20px; outline: none; resize: none; `;
+const ModalBtn = styled.button` flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 14px; `;
+const SecondaryButton = styled(ModalBtn)` background: #f1f3f5; color: #555; `;
+const DangerButton = styled(ModalBtn)` background: #ffebee; color: #d9534f; `;
