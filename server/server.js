@@ -31,7 +31,7 @@ const server = http.createServer(app);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15분
-  max: 100, // 한 IP당 허용 횟수
+  max: 5000, // 한 IP당 허용 횟수
   message: "너무 많은 요청을 보냈습니다. 15분 뒤에 다시 시도해주세요."
 });
 app.use(limiter);
