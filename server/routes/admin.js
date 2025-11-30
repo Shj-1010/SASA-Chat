@@ -74,4 +74,31 @@ router.post('/ban', isAdmin, async (req, res) => {
     }
 });
 
+router.get('/rooms', isAdmin, async (req, res) => {
+    try {
+        // 방 정보 + 만든 사람 닉네임 + 현재 인원 수까지 한 번에 조회
+        const [rooms] = await db.query(`
+            SELECT c.id, c.title, c.hashtags, c.created_at, u.nickname as creator,
+            (SELECT COUNT(*) FROM room_participants WHERE room_id = c.id) as user_count
+            FROM chatrooms c
+            LEFT JOIN users u ON c.creator_id = u.id
+            ORDER BY c.created_at DESC
+        `);
+        res.json(rooms);
+    } catch (err) { 
+        res.status(500).send('DB Error'); 
+    }
+});
+
+router.delete('/room/:id', isAdmin, async (req, res) => {
+    const roomId = req.params.id;
+    try {
+        // DB 설정(CASCADE) 덕분에 방을 지우면 메시지, 참여자 기록도 다 같이 사라짐
+        await db.query('DELETE FROM chatrooms WHERE id = ?', [roomId]);
+        res.json({ success: true });
+    } catch (err) { 
+        res.status(500).send('DB Error'); 
+    }
+});
+
 module.exports = router;

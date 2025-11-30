@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaUserPlus, FaSignInAlt, FaHashtag, FaMagic } from 'react-icons/fa';
+import { FaUserPlus } from 'react-icons/fa'; // FaMagic 삭제함
 import api from '../api';
 
 const Recommend = ({ user }) => {
@@ -23,58 +23,60 @@ const Recommend = ({ user }) => {
     fetchRecommends();
   }, []);
 
-  // 친구 요청 (기존 API 재활용)
   const sendRequest = async (receiverId) => {
     if(window.confirm("친구 요청을 보내시겠습니까?")) {
-        const res = await api.post('/friend/request', { receiverId });
-        if(res.data.success) alert("요청 전송 완료!");
-        else alert(res.data.msg);
+        try {
+            const res = await api.post('/friend/request', { receiverId });
+            if(res.data.success) alert("요청 전송 완료!");
+            else alert(res.data.msg);
+        } catch(err) { alert("요청 실패"); }
     }
   };
 
-  // 채팅방 입장 (실제로는 Chat 탭으로 이동시켜야 함)
   const joinRoom = async (roomId) => {
       try {
-          // 1. 서버에 "나 이 방 들어갈래!" 요청
           await api.post('/chat/join', { roomId });
-          
-          alert("채팅방에 참여합니다!");
-          // 2. 채팅 탭으로 이동 (새로고침 효과를 위해 window.location 사용하거나, 상태관리 필요)
-          // 여기서는 간단하게 메인으로 이동 (Chat 탭이 기본이라면)
+          alert("채팅방에 참여했습니다!");
           window.location.href = "/"; 
       } catch (err) {
           alert("참여 실패!");
       }
   };
 
-  if (loading) return <Container><Loading>추천 알고리즘 분석 중...</Loading></Container>;
-
   return (
     <Container>
       <Header>
-        <Title><FaMagic style={{marginRight: '10px', color:'#a55eea'}}/> 맞춤 추천</Title>
+        {/* [수정] 아이콘 태그 삭제함. 이제 글씨만 나옵니다. */}
+        <Title>맞춤 추천</Title> 
         <Subtitle>
-             <b>{user.nickname}</b>님의 관심사<br/>
-             <TagHighlight>{user.hashtags || "태그 없음"}</TagHighlight>
+             <b>{user?.nickname}</b>님의 관심사<br/>
+             <TagHighlight>{user?.hashtags || "#태그없음"}</TagHighlight>
              를 분석한 결과입니다.
         </Subtitle>
       </Header>
 
       <Section>
-        <SectionTitle>취향이 비슷한 친구</SectionTitle>
+        <SectionTitle>추천 친구</SectionTitle>
         <ScrollBox>
-            {recUsers.length === 0 ? <Empty>비슷한 취향의 친구를 찾지 못했어요<br/>프로필 태그를 더 추가해보세요!</Empty> : null}
-            
-            {recUsers.map(u => (
+            {loading ? <LoadingMsg>분석 중...</LoadingMsg> : 
+             recUsers.length === 0 ? (
+                <EmptyMsg>
+                  비슷한 취향의 친구를 찾지 못했어요.<br />
+                  프로필 태그를 추가해보세요.
+                </EmptyMsg>
+              ) :
+             recUsers.map(u => (
                 <Card key={u.id}>
-                    <ProfileImg src={u.profile_img || "/default.png"} />
-                    <Info>
-                        <Name>{u.nickname}</Name>
-                        <Tags>{u.hashtags}</Tags>
-                        <MatchScore>{u.score}개의 관심사 일치!</MatchScore>
-                    </Info>
+                    <UserInfo>
+                        <ProfileImg src={u.profile_img || "/default.png"} />
+                        <InfoText>
+                            <Name>{u.nickname}</Name>
+                            <Status>{u.status_msg || "상태 메시지 없음"}</Status>
+                            <HashTags>{u.hashtags}</HashTags>
+                        </InfoText>
+                    </UserInfo>
                     <ActionBtn onClick={() => sendRequest(u.id)}>
-                        <FaUserPlus />
+                        <FaUserPlus /> 요청
                     </ActionBtn>
                 </Card>
             ))}
@@ -82,20 +84,27 @@ const Recommend = ({ user }) => {
       </Section>
 
       <Section>
-        <SectionTitle>관심 있는 채팅방</SectionTitle>
+        <SectionTitle>추천 채팅방</SectionTitle>
         <ScrollBox>
-            {recRooms.length === 0 ? <Empty>관심사가 일치하는 채팅방이 없어요.<br/>직접 만들어보시는 건 어때요?</Empty> : null}
-
-            {recRooms.map(r => (
-                <Card key={r.id}>
-                    <RoomIcon><FaHashtag /></RoomIcon>
-                    <Info>
-                        <Name>{r.title}</Name>
-                        <MatchScore>관련 키워드 포함됨</MatchScore>
-                    </Info>
-                    <ActionBtn className="join" onClick={() => joinRoom(r.id)}>
-                        <FaSignInAlt />
-                    </ActionBtn>
+            {loading ? <LoadingMsg>분석 중...</LoadingMsg> : 
+             recRooms.length === 0 ? (<EmptyMsg>
+                  관심사가 일치하는 채팅방이 없어요.<br />
+                  직접 만들어볼까요?
+                </EmptyMsg> 
+             ):
+             recRooms.map(room => (
+                <Card key={room.id}>
+                    <UserInfo>
+                        <RoomIcon>{room.title ? room.title[0] : '?'}</RoomIcon>
+                        <InfoText>
+                            <Name>{room.title}</Name>
+                            <HashTags>{room.hashtags}</HashTags>
+                            <SubInfo>참여 {room.user_count || 0}명</SubInfo>
+                        </InfoText>
+                    </UserInfo>
+                    <JoinBtn onClick={() => joinRoom(room.id)}>
+                        참여
+                    </JoinBtn>
                 </Card>
             ))}
         </ScrollBox>
@@ -106,26 +115,90 @@ const Recommend = ({ user }) => {
 
 export default Recommend;
 
-// --- 스타일 ---
-const Container = styled.div` padding: 30px; max-width: 600px; margin: 0 auto; overflow-y: auto; height: 100vh; padding-bottom: 100px;`;
-const Loading = styled.div` text-align: center; margin-top: 100px; font-size: 18px; color: #666; `;
-const Header = styled.div` margin-bottom: 30px; text-align: center; `;
-const Title = styled.h2` font-size: 24px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; color: #333; `;
-const Subtitle = styled.p` color: #666; line-height: 1.5; `;
-const TagHighlight = styled.span` color: #4a90e2; font-weight: bold; margin: 0 5px; `;
+// --- 스타일 (그대로 유지) ---
 
-const Section = styled.div` margin-bottom: 40px; `;
-const SectionTitle = styled.h3` font-size: 18px; font-weight: bold; margin-bottom: 15px; border-left: 4px solid #4a90e2; padding-left: 10px; `;
-const ScrollBox = styled.div` display: flex; flex-direction: column; gap: 10px; `;
+const Container = styled.div`
+  padding: 20px;
+  height: 100%;
+  overflow-y: auto;
+  background-color: #fdfdfd;
+`;
 
-const Card = styled.div` background: white; padding: 15px; border-radius: 12px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; transition: 0.2s; &:hover { transform: translateY(-2px); } `;
-const ProfileImg = styled.img` width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #eee; `;
-const RoomIcon = styled.div` width: 50px; height: 50px; border-radius: 15px; background: #e3f2fd; color: #4a90e2; display: flex; align-items: center; justify-content: center; font-size: 20px; `;
+const Header = styled.div`
+  background: white;
+  padding: 30px 20px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(165, 94, 234, 0.1); 
+  margin-bottom: 30px;
+  text-align: center;
+  border: 1px solid #f0f0f0;
+`;
 
-const Info = styled.div` flex: 1; margin-left: 15px; `;
-const Name = styled.div` font-weight: bold; font-size: 16px; margin-bottom: 4px; `;
-const Tags = styled.div` font-size: 12px; color: #888; margin-bottom: 4px; `;
-const MatchScore = styled.div` font-size: 12px; color: #a55eea; font-weight: bold; `;
+const Title = styled.h1`
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 15px;
+  /* 아이콘 정렬용 속성 삭제해도 됨 */
+  display: block; 
+`;
 
-const ActionBtn = styled.button` width: 40px; height: 40px; border-radius: 50%; border: none; background: #f0f2f5; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: 0.2s; &:hover { background: #4a90e2; color: white; } &.join:hover { background: #2ecc71; } `;
-const Empty = styled.div` text-align: center; color: #999; padding: 20px; font-size: 14px; background: #f9f9f9; border-radius: 10px; `;
+const Subtitle = styled.div`
+  font-size: 16px;
+  color: #666;
+  line-height: 1.6;
+`;
+
+const TagHighlight = styled.span`
+  display: inline-block;
+  background: #f3e5f5; 
+  color: #a55eea;      
+  padding: 2px 10px;
+  border-radius: 15px;
+  font-weight: bold;
+  margin: 0 5px;
+`;
+
+const Section = styled.div` margin-bottom: 30px; `;
+const SectionTitle = styled.h2`
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: #444;
+  display: flex;
+  align-items: center;
+  &:before {
+    content: '';
+    display: block;
+    width: 5px;
+    height: 20px;
+    background: #a55eea; 
+    margin-right: 10px;
+    border-radius: 5px;
+  }
+`;
+const ScrollBox = styled.div` display: flex; flex-direction: column; gap: 15px; `;
+const Card = styled.div`
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform 0.2s;
+  border: 1px solid #f5f5f5;
+  &:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+`;
+const UserInfo = styled.div` display: flex; align-items: center; gap: 15px; flex: 1; `;
+const ProfileImg = styled.img` width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; `;
+const RoomIcon = styled.div` width: 50px; height: 50px; border-radius: 15px; background: #f3e5f5; color: #a55eea; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; `;
+const InfoText = styled.div` display: flex; flex-direction: column; `;
+const Name = styled.div` font-weight: bold; font-size: 16px; color: #333; `;
+const Status = styled.div` font-size: 13px; color: #888; margin-top: 3px; `;
+const HashTags = styled.div` font-size: 12px; color: #a55eea; margin-top: 5px; `;
+const SubInfo = styled.div` font-size: 12px; color: #aaa; margin-top: 3px; `;
+const ActionBtn = styled.button` background: #a55eea; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: bold; transition: 0.2s; &:hover { background: #8854d0; } `;
+const JoinBtn = styled(ActionBtn)` background: #4a90e2; &:hover { background: #357abd; } `;
+const LoadingMsg = styled.div` text-align: center; color: #aaa; padding: 20px; `;
+const EmptyMsg = styled.div` text-align: center; color: #aaa; padding: 20px; background: #f9f9f9; border-radius: 10px; `;
