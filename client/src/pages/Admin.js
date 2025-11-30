@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaUserBan, FaTrash, FaTimes, FaSearch } from 'react-icons/fa'; // 아이콘 추가
+import { FaUserTimes, FaTrash, FaTimes } from 'react-icons/fa'; // [수정] FaUserBan -> FaUserTimes 로 변경
 import api from '../api';
 
 const Admin = () => {
@@ -9,13 +9,13 @@ const Admin = () => {
   // 데이터 상태
   const [users, setUsers] = useState([]);
   const [reports, setReports] = useState([]);
-  const [rooms, setRooms] = useState([]); // [NEW] 채팅방 목록
+  const [rooms, setRooms] = useState([]); 
 
   // 모달 상태
   const [isBanModalOpen, setIsBanModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false); // [NEW] 프로필 모달
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false); 
   
-  const [targetUser, setTargetUser] = useState(null); // 선택된 유저 정보
+  const [targetUser, setTargetUser] = useState(null); 
   const [duration, setDuration] = useState('1h');
 
   // 데이터 불러오기
@@ -27,7 +27,6 @@ const Admin = () => {
       const resReports = await api.get('/admin/reports');
       setReports(resReports.data);
 
-      // [NEW] 채팅방 목록 가져오기
       const resRooms = await api.get('/admin/rooms');
       setRooms(resRooms.data);
 
@@ -46,7 +45,7 @@ const Admin = () => {
       setIsBanModalOpen(true);
   };
 
-  // [NEW] 유저 프로필 보기 (모달 열기)
+  // 유저 프로필 보기 (모달 열기)
   const openProfileModal = (user) => {
       setTargetUser(user);
       setIsProfileModalOpen(true);
@@ -63,7 +62,7 @@ const Admin = () => {
     } catch(err) { alert("오류 발생"); }
   };
 
-  // [NEW] 채팅방 강제 삭제
+  // 채팅방 강제 삭제
   const deleteRoom = async (roomId, title) => {
       if(window.confirm(`정말 '${title}' 채팅방을 영구 삭제하시겠습니까?\n모든 대화 내용이 사라집니다.`)) {
           try {
@@ -103,7 +102,6 @@ const Admin = () => {
                         <tr key={u.id}>
                             <td>{u.id}</td>
                             <td>
-                                {/* [NEW] 닉네임 클릭 시 프로필 모달 */}
                                 <ClickableName onClick={() => openProfileModal(u)}>
                                     {u.nickname}
                                 </ClickableName>
@@ -116,7 +114,8 @@ const Admin = () => {
                             <td>
                                 {u.role !== 'admin' && (
                                     <ActionBtn onClick={() => openBanModal(u)}>
-                                        <FaUserBan /> 제재
+                                        {/* [수정] 아이콘 변경 */}
+                                        <FaUserTimes /> 제재
                                     </ActionBtn>
                                 )}
                             </td>
@@ -151,7 +150,7 @@ const Admin = () => {
              </Table>
         )}
 
-        {/* 3. [NEW] 채팅방 관리 탭 */}
+        {/* 3. 채팅방 관리 탭 */}
         {activeTab === 'rooms' && (
             <Table>
                 <thead>
@@ -204,7 +203,7 @@ const Admin = () => {
           </ModalOverlay>
       )}
 
-      {/* --- [NEW] 프로필 상세 모달 --- */}
+      {/* --- 프로필 상세 모달 --- */}
       {isProfileModalOpen && targetUser && (
           <ModalOverlay onClick={() => setIsProfileModalOpen(false)}>
               <ProfileModalBox onClick={e => e.stopPropagation()}>
@@ -219,7 +218,8 @@ const Admin = () => {
                       <Button onClick={() => setIsProfileModalOpen(false)}>닫기</Button>
                       {targetUser.role !== 'admin' && (
                           <DangerButton onClick={() => { setIsProfileModalOpen(false); openBanModal(targetUser); }}>
-                              <FaUserBan /> 이 유저 제재하기
+                              {/* [수정] 아이콘 변경 */}
+                              <FaUserTimes /> 이 유저 제재하기
                           </DangerButton>
                       )}
                   </ModalFooter>
