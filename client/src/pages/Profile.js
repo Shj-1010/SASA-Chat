@@ -13,6 +13,24 @@ const Profile = ({ user, setUser }) => {
   const [preview, setPreview] = useState(null);
   const fileInputRef = useRef(null);
 
+  // [핵심 수정] 프로필 탭이 열릴 때마다 서버에서 '최신 유저 정보'를 다시 가져옴!
+  useEffect(() => {
+    const fetchLatestUserData = async () => {
+        try {
+            const res = await api.get('/user/profile');
+            if(res.data.success) {
+                // 부모(Home.js)가 가진 user 정보를 최신으로 업데이트
+                setUser(res.data.user);
+            }
+        } catch(err) {
+            console.error("최신 정보 불러오기 실패");
+        }
+    };
+
+    fetchLatestUserData();
+  }, [setUser]); // 처음 켜질 때 한 번 실행
+
+  // user 정보가 바뀌면 입력창들도 업데이트
   useEffect(() => {
     if (user) {
       setEditName(user.nickname);
@@ -36,7 +54,7 @@ const Profile = ({ user, setUser }) => {
     }
   };
 
-  // [수정] 헤더 설정 삭제! (이제 저장 잘 됩니다)
+  // 저장 함수 (경고창 없음, 헤더 설정 삭제됨 - 저장 잘 됨)
   const handleSave = async () => {
     try {
       const formData = new FormData();
@@ -47,15 +65,15 @@ const Profile = ({ user, setUser }) => {
         formData.append('profile_img', file);
       }
 
-      // [핵심 수정] headers 설정을 지웠습니다. Axios가 알아서 처리합니다.
+      // Axios가 알아서 Content-Type 설정함
       const res = await api.put('/user/profile', formData);
 
       if (res.data.success) {
         setUser(res.data.user);
         setIsEditing(false);
-        // 저장 성공! (조용히 처리)
+        // 저장 완료 (조용히 성공)
       } else {
-          alert("저장 실패: " + res.data.msg); // 서버가 보낸 에러 메시지 표시
+          alert("저장 실패: " + res.data.msg);
       }
     } catch (err) {
       console.error(err);
@@ -127,7 +145,7 @@ const Profile = ({ user, setUser }) => {
 
 export default Profile;
 
-// --- 스타일 컴포넌트 (그대로 유지) ---
+// --- 스타일 컴포넌트 ---
 const Container = styled.div` padding: 40px; background-color: #fdfdfd; height: 100%; overflow-y: auto; `;
 const Header = styled.h1` font-size: 26px; font-weight: bold; margin-bottom: 30px; color: #333; `;
 const ProfileCard = styled.div` background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; max-width: 500px; margin: 0 auto; text-align: center; `;
